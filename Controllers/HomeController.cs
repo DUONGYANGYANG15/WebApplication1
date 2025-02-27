@@ -1,13 +1,12 @@
 using System.Diagnostics;
-using Microsoft.AspNetCore.Identity;
+using ASC.Web.Configuration;
+using ASC.Web.Models;
+using ASC.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using WebApplication1.Configuration;
-using WebApplication1.Models;
-using WebApplication1.Services;
 
-namespace WebApplication1.Controllers
-{ 
+namespace ASC.Web.Controllers
+{
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
@@ -30,7 +29,7 @@ namespace WebApplication1.Controllers
 
         public IActionResult Index([FromServices] IEmailSender emailSender)
         {
-            var emailService = this.HttpContext.RequestServices.GetService(typeof(IEmailSender)) as IEmailSender;
+            var emailService = HttpContext.RequestServices.GetService(typeof(IEmailSender)) as IEmailSender;
             ViewBag.Title = _settings.Value.ApplicationTitle;
             return View();
         }

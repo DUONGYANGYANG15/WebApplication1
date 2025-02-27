@@ -1,4 +1,4 @@
-﻿namespace WebApplication1.Configuration
+﻿namespace ASC.Web.Configuration
 {
     public class ApplicationSettings
     {

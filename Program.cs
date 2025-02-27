@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using WebApplication1.Data;
-using WebApplication1.Configuration;
-using WebApplication1.Services;
+using ASC.Web.Data;
+using ASC.Web.Configuration;
+using ASC.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

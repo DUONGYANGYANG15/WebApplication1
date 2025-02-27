@@ -1,4 +1,4 @@
-﻿namespace WebApplication1.Services
+﻿namespace ASC.Web.Services
 {
     public class AuthMessageSender : IEmailSender, ISmsSender
     {

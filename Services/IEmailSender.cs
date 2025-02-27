@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
-namespace WebApplication1.Services
+namespace ASC.Web.Services
 {
     public interface IEmailSender
     {
-        Task SendEmailAsync(string email,string subject,string message);
+        Task SendEmailAsync(string email, string subject, string message);
     };
-    
+
 }
