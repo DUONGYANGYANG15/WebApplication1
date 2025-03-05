@@ -7,6 +7,7 @@ namespace ASC.Web.Data
     public class ApplicationDbContext : IdentityDbContext
     {
         public virtual DbSet<MasterDataKey> MasterDataKeys { get; set; }
+        public virtual DbSet<MasterDataValue> MasterDataValues { get; set; }
         public virtual DbSet<ServiceRequest> ServiceRequests { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
@@ -14,7 +15,7 @@ namespace ASC.Web.Data
             Database.Migrate();
         }
 
-        protected override void OnModelCreating(ModelBuilder builder)
+       protected override void OnModelCreating(ModelBuilder builder)
         {
             builder.Entity<MasterDataKey>()
                 .HasKey(e => new { e.PartitionKey, e.RowKey });

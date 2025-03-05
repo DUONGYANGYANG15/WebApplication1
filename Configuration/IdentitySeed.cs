@@ -1,74 +1,76 @@
 ﻿using ASC.Model.BaseTypes;
 using ASC.Web.Configuration;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using System.Security.Claims;
+
 namespace ASC.Web.Data
 {
     public class IdentitySeed : IIdentitySeed
     {
-        public async Task Seed(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, IOptions<ApplicationSettings> options)
-        {
-            // Get All comma-separated roles
-            var roles = options.Value.Roles.Split(new char[] { ',' });
+        private readonly IConfiguration _configuration;
 
-            // Create roles if they don’t exist
+        public IdentitySeed(IConfiguration configuration)
+        {
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration), "Configuration is null");
+        }
+
+        public async Task Seed(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager)
+        {
+            if (roleManager == null) throw new ArgumentNullException(nameof(roleManager), "RoleManager is null");
+            if (userManager == null) throw new ArgumentNullException(nameof(userManager), "UserManager is null");
+
+            var roles = _configuration.GetSection("ApplicationSettings:Roles").Get<string[]>() ?? Array.Empty<string>();
+
+            if (roles.Length == 0)
+                throw new InvalidOperationException("Roles configuration is missing or empty in ApplicationSettings.");
+
+            // Tạo Roles nếu chưa tồn tại
             foreach (var role in roles)
             {
-                try
+                if (!await roleManager.RoleExistsAsync(role))
                 {
-                    if (!roleManager.RoleExistsAsync(role).Result)
-                    {
-                        IdentityRole storageRole = new IdentityRole
-                        {
-                            Name = role
-                        };
-                        IdentityResult roleResult = await roleManager.CreateAsync(storageRole);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex);
+                    await roleManager.CreateAsync(new IdentityRole { Name = role });
                 }
             }
-            // Create an admin if he doesn’t exist
-            var admin = await userManager.FindByEmailAsync(options.Value.AdminEmail);
-            if (admin == null)
-            {
-                IdentityUser user = new IdentityUser
-                {
-                    UserName = options.Value.AdminName,
-                    Email = options.Value.AdminEmail,
-                    EmailConfirmed = true
-                };
-                IdentityResult result = await userManager.CreateAsync(user, options.Value.AdminPassword);
-                await userManager.AddClaimsAsync(user, new System.Security.Claims.Claim("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", options.Value.AdminEmail));
-                await userManager.AddClaimsAsync(user, new System.Security.Claims.Claim("IsActive", "True"));
 
-                // Add Admin to Admin roles
-                if (result.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(user, Roles.Admin.ToString());
-                }
-            }
-            // Create a service engineer if he doesn’t exist
-            var engineer = await userManager.FindByEmailAsync(options.Value.EngineerEmail);
-            if (engineer == null)
+            await CreateUserIfNotExists(userManager, "Admin", "AdminEmail", "AdminPassword", Roles.Admin.ToString(), new List<Claim>
             {
-                IdentityUser user = new IdentityUser
+                new Claim(ClaimTypes.Role, Roles.Admin.ToString())
+            });
+
+            await CreateUserIfNotExists(userManager, "Engineer", "EngineerEmail", "EngineerPassword", Roles.Engineer.ToString(), new List<Claim>
+            {
+                new Claim("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", _configuration[$"ApplicationSettings:EngineerEmail"] ?? ""),
+                new Claim("IsActive", "True")
+            });
+        }
+
+        private async Task CreateUserIfNotExists(UserManager<IdentityUser> userManager, string userKey, string emailKey, string passwordKey, string role, List<Claim> claims)
+        {
+            var email = _configuration[$"ApplicationSettings:{emailKey}"];
+            var name = _configuration[$"ApplicationSettings:{userKey}Name"];
+            var password = _configuration[$"ApplicationSettings:{passwordKey}"];
+
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password)) return;
+
+            var user = await userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                user = new IdentityUser
                 {
-                    UserName = options.Value.EngineerName,
-                    Email = options.Value.EngineerEmail,
+                    UserName = name,
+                    Email = email,
                     EmailConfirmed = true,
                     LockoutEnabled = false
                 };
-                IdentityResult result = await userManager.CreateAsync(user, options.Value.EngineerPassword);
-                await userManager.AddClaimsAsync(user, new System.Security.Claims.Claim("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", options.Value.EngineerEmail));
-                await userManager.AddClaimsAsync(user, new System.Security.Claims.Claim("IsActive", "True"));
+                var result = await userManager.CreateAsync(user, password);
 
-                // Add Service Engineer to Engineer role
                 if (result.Succeeded)
                 {
-                    await userManager.AddToRoleAsync(user, Roles.Engineer.ToString());
+                    await userManager.AddToRoleAsync(user, role);
+                    await userManager.AddClaimsAsync(user, claims);
                 }
             }
         }
